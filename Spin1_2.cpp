@@ -134,39 +134,16 @@ vector<complex<double>> B_field(vector<double> x, double Bo, double Bl){
 }
 
 
-int main(){
-    cout << setprecision(9) << scientific;
-    //Uniformly distributed random numbers in the interval [0,1].
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_real_distribution<> dis(0.0,1.0);
+int run(double r1, double r2, double r3, double r4, ofstream &out_f, double Bo, double Bl){
     //Variables in which the random number is stored.
     //For initial position (e.i. the velocity direction)
     double cthr=0, phr=0;
     //For the impact parameter
     double alpha=0, imp_N=0;
-    //Maximum Montecarlo tries:
-    int N_Mc=25000;
     //Integrations: one if for the montecarlo and the otherone for the approximate expression b_mx^2*PI*<P>
     double mont=0, app_i=0, mont1=0;
-    //Output files
-    /*ofstream  temp_f, field, pos;
-    pos.open("pos.txt"), field.open("field.txt"), temp_f.open("temp.txt");
-    pos<< setprecision(9) << scientific;
-    field<< setprecision(9) << scientific;
-    temp_f << setprecision(9) << scientific;
-    ofstream prob, speed;
-    prob.open("prob.txt");
-    speed.open("speed.txt");
-    prob << setprecision(9) << scientific; 
-    speed << setprecision(9) << scientific;*/
-
-    ofstream out_f;
-    out_f.open("out.txt"); out_f << setprecision(9) << scientific;
     //Imaginary unit
     complex<double> i(0,1);
-    //Octopole and linear amplitudes
-    double Bo=0, Bl=1.139/2;
     //Velocity and initial position directions and magnitudes
     double Vo=70;
     //Position, Velocity and impact prameter vectors
@@ -181,101 +158,111 @@ int main(){
     double wN, A, C, K;
     vector<double> Bv,Bimp, uBv, CB;
     //Definition of the initial states as the up direction eigenstate 
-    vector<complex<double>> psihCN, psihf;
+    vector<complex<double>> psihCN, psihCN1, psihf;
     //Time constants
-    double Rp=2e-3, Tf, dt, b_max=0.1e-3, l, bm=1e6;
+    double Rp=4e-3, Tf, dt, b_max=0.1e-3, l;
     vector<double> e1, e2, temp;
-    int k; 
-    cout << "fine" << endl;
-    for(int m=0; m<N_Mc; m++){
-        //Generation of the random position parameters
-        //Random polar angle
-        cthr = 2*dis(gen)-1;
-        //Random azimuthal angle
-        phr = 2*PI*dis(gen);
-        //Randon cylindrical angle for the impact parameter
-        alpha = 2*PI*dis(gen);
-        //Random magnitude of the impact parameter
-        imp_N = b_max*sqrt(dis(gen));
-        //Direction oposed to the velocity.n);
-        temp = {-sqrt(1-cthr*cthr)*cos(phr),-sqrt(1-cthr*cthr)*sin(phr),-cthr};
-        //Orthogonal vectors that form a basis with the direction of movement as the z direction.
-        e1 = ortho(temp);
-        e2 = cross(e1,temp);
-        //Initial position
-        xo = MS(Rp,temp);
-        imp = add_M(MS(imp_N*cos(alpha),e1),MS(imp_N*sin(alpha),e2));
-        xo = add_M(xo,imp);
-        //Velocity
-        v = MS(-Vo,temp);
-        //Final time and time-step.
-        Tf=sqrt(inner(xo,xo))/Vo;
-        //Initial field and unit vector in the field direction
-        B=B_field(xo,Bo,Bl);  
+    int k;
+    //Generation of the random position parameters
+    //Random polar angle
+    cthr = 2*r1-1;
+    //Random azimuthal angle
+    phr = 2*PI*r2;
+    //Randon cylindrical angle for the impact parameter
+    alpha = 2*PI*r3;
+    //Random magnitude of the impact parameter
+    imp_N = b_max*sqrt(r4);
+    //Direction oposed to the velocity.n);
+    temp = {-sqrt(1-cthr*cthr)*cos(phr),-sqrt(1-cthr*cthr)*sin(phr),-cthr};
+    //Orthogonal vectors that form a basis with the direction of movement as the z direction.
+    e1 = ortho(temp);
+    e2 = cross(e1,temp);
+    //Initial position
+    xo = MS(Rp,temp);
+    imp = add_M(MS(imp_N*cos(alpha),e1),MS(imp_N*sin(alpha),e2));
+    xo = add_M(xo,imp);
+    //Velocity
+    v = MS(-Vo,temp);
+    //Final time and time-step.
+    Tf=sqrt(inner(xo,xo))/Vo;
+    //Initial field and unit vector in the field direction
+    B=B_field(xo,Bo,Bl);
+    //b=MS(1/sqrt(real(inner(B,B))),B);
+    dt=(0.1)*(h/(sqrt(real(inner(B,B)))*mue*2*PI));
+    k= -2*Tf/dt;
+    //Instantaneous spin projections
+    //Sph=SpH(b);
+    //Spherical coordinates of the field.
+    BM=real(sqrt(inner(B,B)));
+    th=acos(real(B.at(2))/BM);
+    if(real(B.at(1))>=0){ph=acos(real(B.at(0))/(BM*sin(th)));}
+    else{ph=2*PI-acos(real(B.at(0))/(BM*sin(th)));}
+    //Initial states. We start the system in the up state of the local initial field. 
+    psihCN={cos(th/2),exp(i*ph)*sin(th/2)};
+    Bv = {-0.5*v.at(0),-0.5*v.at(1),v.at(2)};
+    Bimp = {-0.5*imp.at(0),-0.5*imp.at(1), imp.at(2)};
+    wN=sqrt(inner(Bv,Bv));
+    uBv = MS(1/wN,Bv);
+    CB = {real(B_field(imp,Bo,Bl).at(0)),real(B_field(imp,Bo,Bl).at(1)),real(B_field(imp,Bo,Bl).at(2))};
+    CB = add_M(CB,MS(-inner(uBv,CB),uBv));
+    A=Bl*wN;
+    C=sqrt(inner(CB,CB));
+    K=z*C*C*(1/A);
+    //Time evolution:
+    while(k<=2*Tf/dt){
+        //Position update
+        //if((k%1000)%150==0){pos <<k*dt<<" "<< xo.at(0)*1e3 <<" "<< xo.at(1)*1e3<<" "<< xo.at(2)*1e3<< endl;}
+        xo.at(0)+=v.at(0)*dt;
+        xo.at(1)+=v.at(1)*dt;
+        xo.at(2)+=v.at(2)*dt;
+        //Speed update
+        //if((k%1000)%150==0){speed <<k*dt<<" "<< sqrt(real(inner(v,v))) << endl;}
+        l=Vo*0.5*(1+erf(1.45e5*(k*dt+1.5*Tf)))-Vo*0.5*(1+erf(1.45e5*(k*dt-1.5*Tf)));
+        v=MS(-l , temp);
+        //Field Update
+        //if((k%1000)%150==0){field <<k*dt<<" "<< real(B.at(0)) <<" "<< real(B.at(1))<<" "<< real(B.at(2))<< endl;}
+        B=B_field(xo,Bo,Bl);
         //b=MS(1/sqrt(real(inner(B,B))),B);
-        dt=(0.1)*(h/(sqrt(real(inner(B,B)))*mue*2*PI));
-        k= -2*Tf/dt;
-        //Instantaneous spin projections
+        //Update of the projections
         //Sph=SpH(b);
-        //Spherical coordinates of the field.
-        BM=real(sqrt(inner(B,B)));
-        th=acos(real(B.at(2))/BM);
-        if(real(B.at(1))>=0){ph=acos(real(B.at(0))/(BM*sin(th)));}
-        else{ph=2*PI-acos(real(B.at(0))/(BM*sin(th)));}
-        //Initial states. We start the system in the up state of the local initial field. 
-        psihCN={cos(th/2),exp(i*ph)*sin(th/2)};
-        Bv = {-0.5*v.at(0),-0.5*v.at(1),v.at(2)};
-        Bimp = {-0.5*imp.at(0),-0.5*imp.at(1), imp.at(2)};
-        wN=sqrt(inner(Bv,Bv));
-        uBv = MS(1/wN,Bv);
-        CB = {real(B_field(imp,Bo,Bl).at(0)),real(B_field(imp,Bo,Bl).at(1)),real(B_field(imp,Bo,Bl).at(2))};
-        CB = add_M(CB,MS(-inner(uBv,CB),uBv));
-        A=Bl*wN;
-        C=sqrt(inner(CB,CB));
-        K=2*PI*mue*(1/h)*C*C*(1/A);
-        //Time evolution:
-        while(k<=2*Tf/dt){
-            //Position update
-            //if((k%1000)%150==0){pos <<k*dt<<" "<< xo.at(0)*1e3 <<" "<< xo.at(1)*1e3<<" "<< xo.at(2)*1e3<< endl;}
-            xo.at(0)+=v.at(0)*dt;
-            xo.at(1)+=v.at(1)*dt;
-            xo.at(2)+=v.at(2)*dt;
-            //Speed update
-            //if((k%1000)%150==0){speed <<k*dt<<" "<< sqrt(real(inner(v,v))) << endl;}
-            l=Vo*0.5*(1+erf(2e5*(k*dt+1.5*Tf)))-Vo*0.5*(1+erf(2e5*(k*dt-1.5*Tf)));
-            v=MS(-l , temp);
-            //Field Update
-            //if((k%1000)%150==0){field <<k*dt<<" "<< real(B.at(0)) <<" "<< real(B.at(1))<<" "<< real(B.at(2))<< endl;}
-            B=B_field(xo,Bo,Bl);
-            //b=MS(1/sqrt(real(inner(B,B))),B);
-            //Update of the projections
-            //Sph=SpH(b);
-            //Update of the Hamiltonians
-            HCNh=HamilH(B);
-            //Time evolution of the states
-            //if((k%1000)%150==0){temp_f <<k*dt<<" "<< real(obs(Sph,psihCN))<< endl;}
-            psihCN=CNh(psihCN,HCNh,dt);
-            //Counter update.
-            k+=1;
-        }
-        //Here we obtain the spherical coordinates for the final magnetic field 
-        BM=real(sqrt(inner(B,B)));
-        th=acos(real(B.at(2))/BM);
-        if(real(B.at(1))>=0){ph=acos(real(B.at(0))/(BM*sin(th)));}
-        else{ph=2*PI-acos(real(B.at(0))/(BM*sin(th)));}
-        //Here we find the final down eigenstates
-        psihf={-exp(-i*ph)*sin(th/2),cos(th/2)};
-        /* 
-        //Here we print the probability of a spin flip as the norm of the projection between the final state and the final down eigenstate.
-        prob << imp_N*cos(alpha)*1e3 <<" "<< imp_N*sin(alpha)*1e3 << " " << norm(inner(psihCN,psihf)) << endl;
-        //Finally we print the probability given by the landau-Zener formula.
-        temp_f << imp_N*cos(alpha)*1e3 <<" "<< imp_N*sin(alpha)*1e3 << " " << exp(-K*PI)<< endl;*/
-        
-        //Output print:
-        if(norm(inner(psihCN,psihf))<=exp(-1) && bm>imp_N){bm=imp_N;}
-        out_f <<norm(inner(psihCN,psihf))<<" "<<exp(-K*PI)<<endl;
+        //Update of the Hamiltonians
+        HCNh=HamilH(B);
+        //Time evolution of the states
+        //if((k%1000)%150==0){temp_f <<k*dt<<" "<< real(obs(Sph,psihCN))<< endl;}
+        psihCN=CNh(psihCN,HCNh,dt);
+        //Counter update.
+        k+=1;
+    }
+    //Here we obtain the spherical coordinates for the final magnetic field 
+    BM=real(sqrt(inner(B,B)));
+    th=acos(real(B.at(2))/BM);
+    if(real(B.at(1))>=0){ph=acos(real(B.at(0))/(BM*sin(th)));}
+    else{ph=2*PI-acos(real(B.at(0))/(BM*sin(th)));}
+    //Here we find the final down eigenstates
+    psihf={-exp(-i*ph)*sin(th/2),cos(th/2)};
+    out_f <<norm(inner(psihCN,psihf))<<" "<<exp(-K*PI)<<endl;
+    return 0;
+}
 
-        
+int main(){
+    cout << setprecision(9) << scientific;
+    //Uniformly distributed random numbers in the interval [0,1].
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<> dis(0.0,1.0);
+    int N_Mc=50;
+    double Bo=0, Bl=1.139/2;
+    double Bo1=8595.766069, Bl1=1.139/2;
+    ofstream out1;
+    out1.open("out1.txt"); out1<<setprecision(9)<<scientific;
+
+    ofstream out2;
+    out2.open("out2.txt"); out2<<setprecision(9)<<scientific;
+    double r1, r2, r3, r4;
+    for(int i=0; i<=N_Mc; i++){
+        r1=dis(gen); r2=dis(gen); r3=dis(gen); r4=dis(gen);
+        run(r1,r2,r3,r4,out1, Bo, Bl);
+        run(r1,r2,r3,r4,out2, Bo1, Bl1);
     }
     return 0;
 }
