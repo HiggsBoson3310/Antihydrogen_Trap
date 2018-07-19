@@ -147,7 +147,7 @@ int main(){
     //For the impact parameter
     double alpha=0, imp_N=0;
     //Maximum Montecarlo tries:
-    int N_Mc=25000;
+    int N_Mc=5000;
     //Integrations: one if for the montecarlo and the otherone for the approximate expression b_mx^2*PI*<P>
     double mont=0, app_i=0, mont1=0;
     //Output files
@@ -194,6 +194,7 @@ int main(){
     int k; 
     cout << "fine" << endl;
     for(int m=0; m<N_Mc; m++){
+        cout << m << endl;
         //Generation of the random position parameters
         //Random polar angle
         cthr = 2*dis(gen)-1;
@@ -219,12 +220,10 @@ int main(){
         //Initial field and unit vector in the field direction
         B=B_field(xo,Bo,Bq,Bc);
         b=MS(1/sqrt(real(inner(B,B))),B);
-        dt=0.5*(0.01)*(h/(sqrt(real(inner(B,B)))*mue*2*PI));
-        cout << Tf << " "<< dt << endl;
+        dt=Tf/3e4;/*(0.1)*(h/(sqrt(real(inner(B,B)))*mue*2*PI))*/;
         k= -2*Tf/dt;
-        cout << -2*k << endl;
         //Instantaneous spin projections
-        Sph=Sp1(b);
+        //Sph=Sp1(b);
         //Spherical coordinates of the field.
         BM=real(sqrt(inner(B,B)));
         th=acos(real(B.at(2))/BM);
