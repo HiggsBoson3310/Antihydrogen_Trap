@@ -148,13 +148,13 @@ int cross(double Vo, ofstream &out){
     //For the impact parameter
     double alpha=0, imp_N=0;
     //Maximum Montecarlo tries:
-    int N_Mc=500;
+    int N_Mc=1;
     //Integrations: one if for the montecarlo and the otherone for the approximate expression b_mx^2*PI*<P>
     double mont=0, app_i=0, mont1=0;
     //Imaginary unit
     complex<double> i(0,1);
     //Octopole and linear amplitudes
-    double Bc=100;
+    double Bc=1000;
     //Position, Velocity and impact prameter vectors
     vector<double> v, xo, imp;
     //Initial B-fields
@@ -169,9 +169,9 @@ int cross(double Vo, ofstream &out){
     //Definition of the initial states as the up direction eigenstate 
     vector<complex<double>> psihCN, psiCN2, psiCN3, psihf, psihf2, psihf3;
     //Time constants
-    double Rp=1e-3, Tf, dt, b_max=0.15e-3*Vo, l, uu=0, ud=0, uz=0, dd=0, dz=0, zz=0;
+    double Tf, dt, b_max=0.15e-3*pow(Vo,0.25), Rp=5*b_max, l, uu=0, ud=0, uz=0, dd=0, dz=0, zz=0;
     vector<double> e1, e2, temp;
-    int k; 
+    int k;
     for(int m=0; m<N_Mc; m++){
         //Generation of the random position parameters
         //Random polar angle
@@ -197,9 +197,14 @@ int cross(double Vo, ofstream &out){
         Tf=Rp/Vo;
         //Initial field and unit vector in the field direction
         B=B_field(xo,Bc);
-        b=MS(1/sqrt(real(inner(B,B))),B);
-        dt=Tf/3e4;/*(0.1)*(h/(sqrt(real(inner(B,B)))*mue*2*PI))*/;
+        dt=(h/(2*PI*mue))*(1/2e1)*(1/ sqrt(real(inner(B,B))));
+        cout << Vo << endl;
+        cout << sqrt(real(inner(B,B))) << endl;
+        cout << dt << endl;
+        cout << Tf << endl;
+        cout << Rp << endl; 
         k= -2*Tf/dt;
+        cout << 2*k << endl;
         //Instantaneous spin projections
         //Sph=Sp1(b);
         //Spherical coordinates of the field.
@@ -260,7 +265,7 @@ int main(){
     double dVo=0.7;
     ofstream out;
     out.open("out.txt"); out << setprecision(9) << scientific;
-    for(int i=1; i<2; i++){
+    for(int i=10; i<=10; i++){
         cout << i << endl;
         cross(i*dVo,out);
     }
