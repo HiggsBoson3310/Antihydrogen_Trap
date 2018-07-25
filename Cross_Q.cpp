@@ -148,13 +148,11 @@ int cross(double Vo, ofstream &out){
     //For the impact parameter
     double alpha=0, imp_N=0;
     //Maximum Montecarlo tries:
-    int N_Mc=500;
-    //Integrations: one if for the montecarlo and the otherone for the approximate expression b_mx^2*PI*<P>
-    double mont=0, app_i=0, mont1=0;
+    int N_Mc=5000;
     //Imaginary unit
     complex<double> i(0,1);
     //Octopole and linear amplitudes
-    double Bc=100;
+    double Bc=1000;
     //Position, Velocity and impact prameter vectors
     vector<double> v, xo, imp;
     //Initial B-fields
@@ -163,13 +161,10 @@ int cross(double Vo, ofstream &out){
     //Sph=SpH(b);
     //B field direction and magnitude
     double BM, th, ph;
-    //Landau-Zener factors
-    double wN, A, C, K;
-    vector<double> Bv,Bimp, uBv, CB;
-    //Definition of the initial states as the up direction eigenstate 
+    //Definition of the initial and final quantum states 
     vector<complex<double>> psihCN, psiCN2, psiCN3, psihf, psihf2, psihf3;
     //Time constants
-    double Rp=1e-3, Tf, dt, b_max=0.15e-3*Vo, l, uu=0, ud=0, uz=0, dd=0, dz=0, zz=0;
+    double Tf, dt, b_max=0.15e-3*pow(Vo,1/5.), Rp = 5*b_max, l, uu=0, ud=0, uz=0, dd=0, dz=0, zz=0;
     vector<double> e1, e2, temp;
     int k; 
     for(int m=0; m<N_Mc; m++){
@@ -198,7 +193,7 @@ int cross(double Vo, ofstream &out){
         //Initial field and unit vector in the field direction
         B=B_field(xo,Bc);
         b=MS(1/sqrt(real(inner(B,B))),B);
-        dt=Tf/3e4;/*(0.1)*(h/(sqrt(real(inner(B,B)))*mue*2*PI))*/;
+        dt=(1/2e4)*(h/(sqrt(real(inner(B,B)))*mue*2*PI));
         k= -2*Tf/dt;
         //Instantaneous spin projections
         //Sph=Sp1(b);
@@ -225,9 +220,6 @@ int cross(double Vo, ofstream &out){
             //Field Update
             //if((k%1000)%150==0){field <<k*dt<<" "<< real(B.at(0)) <<" "<< real(B.at(1))<<" "<< real(B.at(2))<< endl;}
             B=B_field(xo,Bc);
-            //b=MS(1/sqrt(real(inner(B,B))),B);
-            //Update of the projections
-            //Sph=SpH(b);
             //Update of the Hamiltonians
             HCNh=Hamil(B);
             //Time evolution of the states
@@ -260,7 +252,7 @@ int main(){
     double dVo=0.7;
     ofstream out;
     out.open("out.txt"); out << setprecision(9) << scientific;
-    for(int i=1; i<150; i++){
+    for(int i=10; i<=15; i++){
         cout << i << endl;
         cross(i*dVo,out);
     }
