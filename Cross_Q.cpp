@@ -260,7 +260,7 @@ int main(){
     double dVo=0.7;
     ofstream out;
     out.open("out.txt"); out << setprecision(9) << scientific;
-    for(int i=1; i<2; i++){
+    for(int i=1; i<150; i++){
         cout << i << endl;
         cross(i*dVo,out);
     }
