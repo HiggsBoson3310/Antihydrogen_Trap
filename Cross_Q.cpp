@@ -148,7 +148,9 @@ int cross(double Vo, ofstream &out){
     //For the impact parameter
     double alpha=0, imp_N=0;
     //Maximum Montecarlo tries:
-    int N_Mc=5000;
+    int N_Mc=1000;
+    //Integrations: one if for the montecarlo and the otherone for the approximate expression b_mx^2*PI*<P>
+    double mont=0, app_i=0, mont1=0;
     //Imaginary unit
     complex<double> i(0,1);
     //Octopole and linear amplitudes
@@ -157,16 +159,18 @@ int cross(double Vo, ofstream &out){
     vector<double> v, xo, imp;
     //Initial B-fields
     vector<complex<double>> B, b, Sph, HCNh;
-    //Initial projections
-    //Sph=SpH(b);
-    //B field direction and magnitude
+    //Spherical coordinates of the field
     double BM, th, ph;
-    //Definition of the initial and final quantum states 
+    //Definition of the initial and final states
     vector<complex<double>> psihCN, psiCN2, psiCN3, psihf, psihf2, psihf3;
-    //Time constants
-    double Tf, dt, b_max=0.15e-3*pow(Vo,1/5.), Rp = 5*b_max, l, uu=0, ud=0, uz=0, dd=0, dz=0, zz=0;
+    //Time scale variables: final time, time step, maximum impact parameter sclaed by the speed, distance of approach and speed time dependence.
+    double Tf, dt, b_max=0.15e-3*pow(Vo,0.25), Rp=5*b_max, l;
+    //Cross section variables.
+    double ud=0, uz=0, dz=0;
+    //Temporal vectors, speed direction and tow orthogonal vectors.
     vector<double> e1, e2, temp;
-    int k; 
+    //Time evolution counter.
+    int k;
     for(int m=0; m<N_Mc; m++){
         //Generation of the random position parameters
         //Random polar angle
@@ -177,33 +181,34 @@ int cross(double Vo, ofstream &out){
         alpha = 2*PI*dis(gen);
         //Random magnitude of the impact parameter
         imp_N = b_max*sqrt(dis(gen));
-        //Direction oposed to the velocity.n);
+        //Direction oposed to the velocity:
         temp = {-sqrt(1-cthr*cthr)*cos(phr),-sqrt(1-cthr*cthr)*sin(phr),-cthr};
         //Orthogonal vectors that form a basis with the direction of movement as the z direction.
         e1 = ortho(temp);
         e2 = cross(e1,temp);
         //Initial position
         xo = MS(1.5*Rp,temp);
+        //Impact parameter perdicular to the direction of motion
         imp = add_M(MS(imp_N*cos(alpha),e1),MS(imp_N*sin(alpha),e2));
+        //Initial position with the displacement due to the impact parameter.
         xo = add_M(xo,imp);
         //Velocity
         v = MS(-Vo,temp);
-        //Final time and time-step.
+        //The final time is defined as the time it takes for the spin travel a radius of the sphere. 
         Tf=Rp/Vo;
         //Initial field and unit vector in the field direction
         B=B_field(xo,Bc);
-        b=MS(1/sqrt(real(inner(B,B))),B);
-        dt=(1/2e4)*(h/(sqrt(real(inner(B,B)))*mue*2*PI));
+        //Time step defined as a franction of the period of oscilation. 
+        dt=(h/(2*PI*mue))*(1/2e4)*(1/ sqrt(real(inner(B,B)))); 
+        //We start twice as far from the center to have the spin in rest for a certain time of satibilization.
         k= -2*Tf/dt;
-        //Instantaneous spin projections
-        //Sph=Sp1(b);
         //Spherical coordinates of the field.
         BM=real(sqrt(inner(B,B)));
         th=acos(real(B.at(2))/BM);
         if(real(B.at(1))>=0){ph=acos(real(B.at(0))/(BM*sin(th)));}
         else{ph=2*PI-acos(real(B.at(0))/(BM*sin(th)));}
-        //Initial states. We start the system in the up state of the local initial field. 
-        psihCN={0.5*(1+cos(th))*exp(-i*ph),(1/sqrt(2))*sin(th),0.5*(1-cos(th))*exp(i*ph)};
+        //Initial states. We start the system in each of the local eigenstates. 
+        psihCN = {0.5*(1+cos(th))*exp(-i*ph),(1/sqrt(2))*sin(th),0.5*(1-cos(th))*exp(i*ph)};
         psiCN2 = {-(1/sqrt(2))*sin(th)*exp(-i*ph),cos(th),(1/sqrt(2))*sin(th)*exp(i*ph)};
         psiCN3 = {0.5*(1-cos(th))*exp(-i*ph),-(1/sqrt(2))*sin(th),0.5*(1+cos(th))*exp(i*ph)};
         //Time evolution:
@@ -215,7 +220,7 @@ int cross(double Vo, ofstream &out){
             xo.at(2)+=v.at(2)*dt;
             //Speed update
             //if((k%1000)%150==0){speed <<k*dt<<" "<< sqrt(real(inner(v,v))) << endl;}
-            l=Vo*0.5*(1+erf(5e5*(k*dt+1.5*Tf)))-Vo*0.5*(1+erf(5e5*(k*dt-1.5*Tf)));
+            l=Vo*0.5*(1+erf(2e5*(k*dt+1.5*Tf)))-Vo*0.5*(1+erf(2e5*(k*dt-1.5*Tf)));
             v=MS(-l , temp);
             //Field Update
             //if((k%1000)%150==0){field <<k*dt<<" "<< real(B.at(0)) <<" "<< real(B.at(1))<<" "<< real(B.at(2))<< endl;}
@@ -244,15 +249,15 @@ int cross(double Vo, ofstream &out){
         dz+=b_max*b_max*PI*norm(inner(psiCN2,psihf));
 
     }
-    
     out <<Vo<<" "<< ud/N_Mc <<" "<< uz/N_Mc <<" "<< dz/N_Mc << endl;
     return 0;
 }
 int main(){
-    double dVo=0.7;
+    double dVo=7;
     ofstream out;
-    out.open("out.txt"); out << setprecision(9) << scientific;
-    for(int i=10; i<=15; i++){
+    out.open("outq.txt"); out << setprecision(9) << scientific;
+    cross(1,out);
+    for(int i=1; i<=10; i++){
         cout << i << endl;
         cross(i*dVo,out);
     }
