@@ -257,7 +257,7 @@ int main(){
     ofstream out;
     out.open("outq.txt"); out << setprecision(9) << scientific;
     cross(1,out);
-    for(int i=1; i<=10; i++){
+    for(int i=21; i<=30; i++){
         cout << i << endl;
         cross(i*dVo,out);
     }
