@@ -156,7 +156,7 @@ int main(){
     //Integrations: one if for the montecarlo and the otherone for the approximate expression b_mx^2*PI*<P>
     double mont=0, app_i=0, mont1=0;
     //Octopole and linear amplitudes
-    double Bo=8595.766069, Bq=10,w=(2./3.)*(Bo/Bq);
+    double Bo=8595.766069, Bq=10, Bc=0, w=(2./3.)*(Bo/Bq);
     //Velocity and initial position directions and magnitudes
     double Vo=70;
     //Position, Velocity and impact prameter vectors
